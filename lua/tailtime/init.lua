@@ -2,7 +2,7 @@ local M = {}
 local config = require("tailtime.config")
 local timer = require("tailtime.core.timer")
 local store = require("tailtime.core.store")
-local csv_export = require("tailtime.export.csv")
+local csv_export = require("tailtime.report.csv")
 local report_gen = require("tailtime.core.report")
 
 function M.setup(opts)
@@ -87,7 +87,7 @@ vim.api.nvim_create_user_command("TailExport", function(opts)
 		content = vim.json.encode(tasks)
 		ext = "json"
 	end
-	local dir = vim.fn.expand(config.data_dir)
+	local dir = vim.fn.expand(config.get_data_dir())
 	local path = dir .. "/export_" .. os.date("%Y%m%d_%H%M%S") .. "." .. ext
 	local f = io.open(path, "w")
 	f:write(content)
@@ -95,20 +95,19 @@ vim.api.nvim_create_user_command("TailExport", function(opts)
 	vim.notify(string.format("📤 Exported: %s", path), vim.log.levels.INFO)
 end, { nargs = "?" })
 
-vim.api.nvim_create_user_command("TailReport", function(opts)
-	local range = opts.args or "today"
-	local content = report_gen.generate(range)
+vim.api.nvim_create_user_command("TailReport", function()
+	local content = report_gen.generate()
 
 	vim.cmd("vnew")
 	vim.api.nvim_buf_set_option(0, "buftype", "nofile")
 	vim.api.nvim_buf_set_option(0, "bufhidden", "wipe")
-	vim.api.nvim_buf_set_option(0, "modifiable", false)
+	vim.api.nvim_buf_set_option(0, "modifiable", true)
 	vim.api.nvim_buf_set_lines(0, 0, -1, false, vim.split(content, "\n"))
+	vim.api.nvim_buf_set_option(0, "modifiable", false)
 
 	vim.keymap.set("n", "q", "<cmd>q<CR>", { buffer = true })
 	vim.keymap.set("n", "e", function()
-		local dir = vim.fn.expand(config.data_dir)
-		local path = dir .. "/report_" .. os.date("%Y%m%d_%H%M%S") .. ".md"
+		local path = "./tailtask/report_" .. os.date("%Y%m%d_%H%M%S") .. ".md"
 		local f = io.open(path, "w")
 		f:write("```\n" .. content .. "\n```")
 		f:close()
