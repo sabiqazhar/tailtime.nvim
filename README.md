@@ -20,7 +20,7 @@ A simple Neovim plugin for tracking time spent on tasks. Features live timer dis
 
 ```lua
 {
-  "yourusername/tailtime.nvim",
+  "sabiqazhar/tailtime.nvim",
   config = function()
     require("tailtime").setup({
       -- optional config
@@ -32,7 +32,7 @@ A simple Neovim plugin for tracking time spent on tasks. Features live timer dis
 ### Using packer.nvim
 
 ```lua
-use("yourusername/tailtime.nvim")
+use("sabiqazhar/tailtime.nvim")
 ```
 
 Then configure in your init.lua:
