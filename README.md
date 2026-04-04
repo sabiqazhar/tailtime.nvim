@@ -23,7 +23,7 @@ I wanted something:
 - **Simple** — just start, do the thing, done
 - **Integrated** — right in my editor where I already live
 
-One evening, I was watching some beaver videos on YouTube (we all do that, right? 🦫) and saw how they build dams together as a team — each beaver contributing, working in harmony. That's when it hit me: **TAILTIME** — like the beaver's tail, always there, always working, powering through tasks.
+One evening, I was watching Hoppers Movie (we all do that, right? 🦫) and saw how they build dams together as a team — each beaver contributing, working in harmony. That's when it hit me: **TAILTIME** — like the beaver's tail, always there, always working, powering through tasks.
 
 Plus, beavers just look like they mean business. Hard workers. Relatable. 🛠️
 
@@ -45,9 +45,10 @@ And here we are — a time tracker that actually respects your privacy, runs in 
 
 ### Using lazy.nvim
 
+Add to `~/.config/nvim/lua/plugins/tailtime.lua`:
+
 ```lua
 return {
-  {
   "sabiqazhar/tailtime.nvim",
   lazy = false,
   config = function()
@@ -62,7 +63,6 @@ return {
     })
   end,
   dependencies = { "nvim-lualine/lualine.nvim" }
-  }
 }
 ```
 
