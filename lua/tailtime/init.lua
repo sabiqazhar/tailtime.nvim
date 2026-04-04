@@ -51,6 +51,31 @@ vim.api.nvim_create_user_command("TailStart", function(opts)
 	end
 end, { nargs = "?" })
 
+vim.api.nvim_create_user_command("TailDone", function()
+	if not timer.is_running() then
+		vim.notify("⏹️ No active task", vim.log.levels.WARN)
+		return
+	end
+	local elapsed = timer.stop()
+	local tasks = store.get_tasks()
+	for i = #tasks, 1, -1 do
+		local t = tasks[i]
+		if t.status == "pending" then
+			store.update_task(t.id, {
+				status = "done",
+				start_ts = t.start_ts or (os.time() - elapsed),
+				end_ts = os.time(),
+				duration_sec = elapsed,
+			})
+			vim.notify(
+				string.format("✅ [%s] %s (%dm)", t.project, t.title, math.floor(elapsed / 60)),
+				vim.log.levels.INFO
+			)
+			break
+		end
+	end
+end, {})
+
 vim.api.nvim_create_user_command("TailExport", function(opts)
 	local fmt = opts.args or config.export.default_format
 	local tasks = store.get_tasks()
