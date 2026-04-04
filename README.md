@@ -2,7 +2,32 @@
 
 Time tracking with a beaver's tail 🦫
 
-A simple Neovim plugin for tracking time spent on tasks. Features live timer display, project-based organization, priority levels, and comprehensive reporting.
+## The Story
+
+So here's the thing — every sprint I crush my tickets. 5, 6, sometimes 10 tasks a day. My team lead looks at the board and thinks I'm some kind of productivity wizard 🧙‍♂️.
+
+But truth be told? I had **no idea** how much time I actually spent on each ticket.
+
+Like, was that bug fix really 30 minutes? Or did I actually spend 2 hours because I got distracted by a random GitHub rabbit hole 🐰? Was I *actually* being productive, or just看起来 busy?
+
+I tried Wakatime — cool concept, but:
+- Privacy concerns (your data on someone else's server? 🤔)
+- Free tier limitations hit hard when you're actually trying to track seriously
+
+So I thought, "How hard can it be to build my own?" 😅
+
+I wanted something:
+- **Private** — data stays on my machine
+- **Simple** — just start, do the thing, done
+- **Integrated** — right in my editor where I already live
+
+One evening, I was watching some beaver videos on YouTube (we all do that, right? 🦫) and saw how they build dams together as a team — each beaver contributing, working in harmony. That's when it hit me: **TAILTIME** — like the beaver's tail, always there, always working, powering through tasks.
+
+Plus, beavers just look like they mean business. Hard workers. Relatable. 🛠️
+
+And here we are — a time tracker that actually respects your privacy, runs in Neovim, and maybe makes you feel a little more like a productivity beaver too.
+
+**Happy tracking!** 🦫⏱️
 
 ## Features
 
