@@ -1,6 +1,6 @@
 # tailtime.nvim
 
-Time tracking with a beaver's tail 🦫
+Simple Time tracking for Neovim with a beaver's tail 🦫
 
 ## The Story
 
