@@ -8,15 +8,17 @@ So here's the thing — every sprint I crush my tickets. 5, 6, sometimes 10 task
 
 But truth be told? I had **no idea** how much time I actually spent on each ticket.
 
-Like, was that bug fix really 30 minutes? Or did I actually spend 2 hours because I got distracted by a random GitHub rabbit hole 🐰? Was I *actually* being productive, or just看起来 busy?
+Like, was that bug fix really 30 minutes? Or did I actually spend 2 hours because I got distracted by a random GitHub rabbit hole 🐰? Was I *actually* being productive, or just looks busy?
 
 I tried Wakatime — cool concept, but:
+
 - Privacy concerns (your data on someone else's server? 🤔)
 - Free tier limitations hit hard when you're actually trying to track seriously
 
 So I thought, "How hard can it be to build my own?" 😅
 
 I wanted something:
+
 - **Private** — data stays on my machine
 - **Simple** — just start, do the thing, done
 - **Integrated** — right in my editor where I already live
@@ -44,7 +46,8 @@ And here we are — a time tracker that actually respects your privacy, runs in 
 ### Using lazy.nvim
 
 ```lua
-{
+return {
+  {
   "sabiqazhar/tailtime.nvim",
   lazy = false,
   config = function()
@@ -59,6 +62,7 @@ And here we are — a time tracker that actually respects your privacy, runs in 
     })
   end,
   dependencies = { "nvim-lualine/lualine.nvim" }
+  }
 }
 ```
 
@@ -171,6 +175,7 @@ Press <q> to close • <e> export markdown
 ```
 
 **Report features:**
+
 - Peak productive hour analysis
 - Tasks grouped by project
 - Priority indicators (🟢🟡🔴)
@@ -190,6 +195,7 @@ Tasks are stored in `./tailtask/` as daily JSON files:
 ```
 
 **JSON structure:**
+
 ```json
 {
   "date": "2026-04-04",
