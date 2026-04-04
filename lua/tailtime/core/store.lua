@@ -48,21 +48,32 @@ end
 
 function M.parse_raw_input(raw)
 	raw = raw or ""
+	local parsed_prio = nil
+
+	raw = raw:gsub("%s*@(%a+)%s*$", function(p)
+		local map =
+			{ h = "high", l = "low", m = "medium", med = "medium", high = "high", low = "low", medium = "medium" }
+		parsed_prio = map[p:lower()] or p:lower()
+		return ""
+	end)
+
 	local project, title = raw:match("^%s*(.-)%s*:%s*(.*)$")
 	if not project or vim.trim(project) == "" then
-		return "general", vim.trim(raw)
+		return "general", vim.trim(raw), parsed_prio
 	end
-	return vim.trim(project), vim.trim(title)
+	return vim.trim(project), vim.trim(title), parsed_prio
 end
 
 function M.add_task(raw_input, priority)
-	local project, title = M.parse_raw_input(raw_input)
+	local project, title, parsed_prio = M.parse_raw_input(raw_input)
+	local final_prio = priority or parsed_prio or "medium"
+
 	local session = load_session()
 	local task = {
 		id = session.next_id,
 		project = project,
 		title = title,
-		priority = priority or "medium",
+		priority = final_prio,
 		start_ts = nil,
 		end_ts = nil,
 		duration_sec = nil,
@@ -72,7 +83,7 @@ function M.add_task(raw_input, priority)
 	table.insert(session.tasks, task)
 	session.next_id = session.next_id + 1
 	M.save_session(session)
-	return task.id, project, title
+	return task.id
 end
 
 function M.get_tasks()

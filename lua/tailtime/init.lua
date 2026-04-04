@@ -24,39 +24,34 @@ function M.setup(opts)
 	end
 end
 
-vim.api.nvim_create_user_command("TailtimeStart", function(opts)
+vim.api.nvim_create_user_command("TailStart", function(opts)
 	local raw = opts.args or "Untitled Task"
-	local id, project, title = store.add_task(raw, "medium")
-	timer.start(string.format("[%s] %s", project, title))
-	vim.notify(string.format("🦫 [%s] %s (#%d)", project, title, id), vim.log.levels.INFO)
+	local project, title, auto_prio = store.parse_raw_input(raw)
+
+	local function start_with_priority(priority)
+		local id = store.add_task(raw, priority)
+		local icon = config.priority.icons[priority] or ""
+		timer.start(string.format("[%s] %s %s", project, title, icon))
+		vim.notify(string.format("🦫 [%s] %s (#%d) [%s]", project, title, id, priority), vim.log.levels.INFO)
+	end
+
+	if auto_prio and config.priority.levels[auto_prio] then
+		start_with_priority(auto_prio)
+	else
+		vim.ui.select({ "low", "medium", "high" }, {
+			prompt = "Select priority for task:",
+			format_item = function(item)
+				return string.format("%s %s", config.priority.icons[item] or "", item)
+			end,
+		}, function(choice)
+			if choice then
+				start_with_priority(choice)
+			end
+		end)
+	end
 end, { nargs = "?" })
 
-vim.api.nvim_create_user_command("TailtimeStop", function()
-	if not timer.is_running() then
-		vim.notify("⏹️ No active task", vim.log.levels.WARN)
-		return
-	end
-	local elapsed = timer.stop()
-	local tasks = store.get_tasks()
-	for i = #tasks, 1, -1 do
-		local t = tasks[i]
-		if t.status == "pending" then
-			store.update_task(t.id, {
-				status = "done",
-				start_ts = t.start_ts or (os.time() - elapsed),
-				end_ts = os.time(),
-				duration_sec = elapsed,
-			})
-			vim.notify(
-				string.format("✅ [%s] %s (%dm)", t.project, t.title, math.floor(elapsed / 60)),
-				vim.log.levels.INFO
-			)
-			break
-		end
-	end
-end, {})
-
-vim.api.nvim_create_user_command("TailtimeExport", function(opts)
+vim.api.nvim_create_user_command("TailExport", function(opts)
 	local fmt = opts.args or config.export.default_format
 	local tasks = store.get_tasks()
 	local content, ext
@@ -75,7 +70,7 @@ vim.api.nvim_create_user_command("TailtimeExport", function(opts)
 	vim.notify(string.format("📤 Exported: %s", path), vim.log.levels.INFO)
 end, { nargs = "?" })
 
-vim.api.nvim_create_user_command("TailtimeReport", function(opts)
+vim.api.nvim_create_user_command("TailReport", function(opts)
 	local range = opts.args or "today"
 	local content = report_gen.generate(range)
 
