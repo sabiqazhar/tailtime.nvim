@@ -2,7 +2,7 @@ local M = {}
 local config = require("tailtime.config")
 
 local function today_path()
-	return vim.fn.expand(config.data_dir) .. "/" .. os.date("%Y-%m-%d") .. ".json"
+	return vim.fn.expand(config.get_data_dir()) .. "/" .. os.date("%Y-%m-%d") .. ".json"
 end
 
 local function load_session()
@@ -59,7 +59,10 @@ function M.parse_raw_input(raw)
 
 	local project, title = raw:match("^%s*(.-)%s*:%s*(.*)$")
 	if not project or vim.trim(project) == "" then
-		return "general", vim.trim(raw), parsed_prio
+		-- Use current directory name as project
+		local cwd = vim.fn.getcwd()
+		project = vim.fn.fnamemodify(cwd, ":t") or "general"
+		return project, vim.trim(raw), parsed_prio
 	end
 	return vim.trim(project), vim.trim(title), parsed_prio
 end

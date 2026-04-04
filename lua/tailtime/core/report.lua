@@ -2,93 +2,136 @@ local M = {}
 local config = require("tailtime.config")
 
 local function fmt_hm(sec)
-	return string.format("%dh %dm", math.floor(sec / 3600), math.floor((sec % 3600) / 60))
+	if not sec then
+		return "0m"
+	end
+	local h = math.floor(sec / 3600)
+	local m = math.floor((sec % 3600) / 60)
+	if h > 0 then
+		return string.format("%dh %dm", h, m)
+	end
+	return string.format("%dm", m)
 end
 
-function M.generate(range)
-	local data_dir = vim.fn.expand(config.data_dir)
+local function fmt_time(ts)
+	if not ts then
+		return "--:--"
+	end
+	return os.date("%H:%M", ts)
+end
+
+local function get_priority_icon(prio)
+	return config.priority.icons[prio] or "⚪"
+end
+
+function M.generate()
+	local data_dir = "./tailtask"
 	local files = vim.fn.globpath(data_dir, "*.json", true, true)
-	local tasks = {}
-	local now = os.time()
 
+	if #files == 0 then
+		return "🦫 TAILTIME REPORT\n\nNo data found in ./tailtask"
+	end
+
+	-- Load all tasks
+	local all_tasks = {}
 	for _, f in ipairs(files) do
-		local date_str = f:match("(%d%d%d%d%-%d%d%-%d%d)%.json$")
-		if not date_str then
-			goto continue
-		end
-
-		local y, m, d = date_str:match("(%d+)-(%d+)-(%d+)")
-		local file_time =
-			os.time({ year = tonumber(y), month = tonumber(m), day = tonumber(d), hour = 0, min = 0, sec = 0 })
-		local days_diff = math.floor((now - file_time) / 86400)
-
-		local valid = false
-		if range == "today" and days_diff == 0 then
-			valid = true
-		elseif range == "week" and days_diff >= 0 and days_diff < 7 then
-			valid = true
-		elseif range == date_str then
-			valid = true
-		end
-
-		if valid then
-			local ok, data = pcall(vim.json.decode, vim.fn.readfile(f, "b"):table_concat())
-			if ok and data.tasks then
-				for _, t in ipairs(data.tasks) do
-					table.insert(tasks, t)
-				end
+		local content = table.concat(vim.fn.readfile(f, "b"), "")
+		local ok, data = pcall(vim.json.decode, content)
+		if ok and data and data.tasks then
+			for _, t in ipairs(data.tasks) do
+				table.insert(all_tasks, t)
 			end
 		end
-		::continue::
 	end
 
-	-- Aggregation
-	local total_sec = 0
-	local by_project = {}
-	local by_priority = {}
-	local done_count = 0
-	local pending_count = 0
-
-	for _, t in ipairs(tasks) do
+	-- Group by project
+	local projects = {}
+	for _, t in ipairs(all_tasks) do
+		local proj = t.project or "Unknown"
+		if not projects[proj] then
+			projects[proj] = {
+				name = proj,
+				tasks = {},
+				total_sec = 0,
+				done_count = 0,
+				pending_count = 0,
+			}
+		end
+		table.insert(projects[proj].tasks, t)
 		if t.status == "done" and t.duration_sec then
-			total_sec = total_sec + t.duration_sec
-			done_count = done_count + 1
-
-			by_project[t.project] = (by_project[t.project] or 0) + t.duration_sec
-			by_priority[t.priority] = (by_priority[t.priority] or 0) + t.duration_sec
+			projects[proj].total_sec = projects[proj].total_sec + t.duration_sec
+			projects[proj].done_count = projects[proj].done_count + 1
 		else
-			pending_count = pending_count + 1
+			projects[proj].pending_count = projects[proj].pending_count + 1
 		end
 	end
 
-	-- Sort projects by time desc
-	local sorted_proj = {}
-	for p, s in pairs(by_project) do
-		table.insert(sorted_proj, { name = p, sec = s })
+	-- Calculate peak hours
+	local hour_counts = {}
+	for _, t in ipairs(all_tasks) do
+		if t.start_ts and t.duration_sec then
+			local hour = tonumber(os.date("%H", t.start_ts))
+			hour_counts[hour] = (hour_counts[hour] or 0) + t.duration_sec
+		end
 	end
-	table.sort(sorted_proj, function(a, b)
-		return a.sec > b.sec
+	local peak_hour = nil
+	local peak_sec = 0
+	for hour, sec in pairs(hour_counts) do
+		if sec > peak_sec then
+			peak_sec = sec
+			peak_hour = hour
+		end
+	end
+
+	-- Sort projects by total time
+	local sorted = {}
+	for _, p in pairs(projects) do
+		table.insert(sorted, p)
+	end
+	table.sort(sorted, function(a, b)
+		return a.total_sec > b.total_sec
 	end)
 
+	-- Build report
 	local lines = {}
-	table.insert(lines, "🦫 TAILTIME REPORT — " .. (range == "today" and os.date("%Y-%m-%d") or range))
-	table.insert(lines, string.rep("━", 40))
-	table.insert(lines, string.format("⏱️  Total Tracked : %s", fmt_hm(total_sec)))
-	table.insert(lines, string.format("📦 Projects       : %d active", #sorted_proj))
-	for _, p in ipairs(sorted_proj) do
-		local pct = total_sec > 0 and math.floor(p.sec / total_sec * 100) or 0
-		table.insert(lines, string.format("   • %-15s %s (%d%%)", p.name, fmt_hm(p.sec), pct))
+	local title = #sorted == 1 and sorted[1].name or ("All Projects (" .. #sorted .. ")")
+	table.insert(lines, "🦫 TAILTIME REPORT — " .. title)
+	table.insert(lines, string.rep("━", 50))
+
+	-- Peak hours
+	if peak_hour then
+		local next_hour = (peak_hour + 1) % 24
+		table.insert(lines, string.format("⏰ Peak Hour     : %02d - %02d (%s)", peak_hour, next_hour, fmt_hm(peak_sec)))
 	end
-	table.insert(lines, string.format("🎯 Priority Break:"))
-	for prio, sec in pairs(by_priority) do
-		local icon = config.priority.icons[prio] or "⚪"
-		table.insert(lines, string.format("   %s %-5s: %s", icon, prio, fmt_hm(sec)))
+
+	local grand_total = 0
+	local total_done = 0
+	local total_pending = 0
+
+	for _, proj in ipairs(sorted) do
+		grand_total = grand_total + proj.total_sec
+		total_done = total_done + proj.done_count
+		total_pending = total_pending + proj.pending_count
+
+		table.insert(lines, "")
+		table.insert(lines, string.format("📁 %s", proj.name))
+		table.insert(lines, string.format("   ⏱️  %s | ✅ %d | ⏳ %d", fmt_hm(proj.total_sec), proj.done_count, proj.pending_count))
+
+		-- List tasks under project
+		for _, t in ipairs(proj.tasks) do
+			local status_icon = t.status == "done" and "✅" or "⏳"
+			local priority = get_priority_icon(t.priority)
+			local duration = t.duration_sec and (" (" .. fmt_hm(t.duration_sec) .. ")") or ""
+			local start = fmt_time(t.start_ts)
+			local ending = fmt_time(t.end_ts)
+			table.insert(lines, string.format("   %s %s [%s-%s] %s%s", status_icon, priority, start, ending, t.title, duration))
+		end
 	end
-	table.insert(lines, string.format("✅ Tasks          : %d done / %d pending", done_count, pending_count))
-	if done_count > 0 then
-		table.insert(lines, string.format("⏱️  Avg/Task      : %s", fmt_hm(total_sec / done_count)))
-	end
-	table.insert(lines, string.rep("━", 40))
+
+	table.insert(lines, "")
+	table.insert(lines, string.rep("━", 50))
+	table.insert(lines, string.format("📊 TOTAL: %s | %d done / %d pending", fmt_hm(grand_total), total_done, total_pending))
+	table.insert(lines, "")
 	table.insert(lines, "Press <q> to close • <e> export markdown")
 
 	return table.concat(lines, "\n")
