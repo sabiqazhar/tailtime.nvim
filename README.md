@@ -21,18 +21,40 @@ A simple Neovim plugin for tracking time spent on tasks. Features live timer dis
 ```lua
 {
   "sabiqazhar/tailtime.nvim",
+  lazy = false,
   config = function()
     require("tailtime").setup({
-      -- optional config
+      timer = {
+        enabled = true,
+        position = "lualine_y",
+        format = "🦫 %s | %s",
+        color = { fg = "#a6e3a1" }
+      },
+      export = { default_format = "csv" }
     })
-  end
+  end,
+  dependencies = { "nvim-lualine/lualine.nvim" }
 }
 ```
 
 ### Using packer.nvim
 
 ```lua
-use("sabiqazhar/tailtime.nvim")
+use({
+  "sabiqazhar/tailtime.nvim",
+  config = function()
+    require("tailtime").setup({
+      timer = {
+        enabled = true,
+        position = "lualine_y",
+        format = "🦫 %s | %s",
+        color = { fg = "#a6e3a1" }
+      },
+      export = { default_format = "csv" }
+    })
+  end,
+  requires = { "nvim-lualine/lualine.nvim" }
+})
 ```
 
 Then configure in your init.lua:
