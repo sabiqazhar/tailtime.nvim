@@ -2,6 +2,7 @@ local M = {}
 local config = require("tailtime.config")
 local timer = require("tailtime.core.timer")
 local store = require("tailtime.core.store")
+local git = require("tailtime.core.git")
 local csv_export = require("tailtime.report.csv")
 local report_gen = require("tailtime.core.report")
 
@@ -27,9 +28,10 @@ end
 vim.api.nvim_create_user_command("TailStart", function(opts)
 	local raw = opts.args or "Untitled Task"
 	local project, title, auto_prio = store.parse_raw_input(raw)
+	local git_baseline = git.capture_baseline()
 
 	local function start_with_priority(priority)
-		local id = store.add_task(raw, priority)
+		local id = store.add_task(raw, priority, git_baseline)
 		local icon = config.priority.icons[priority] or ""
 		timer.start(string.format("[%s] %s %s", project, title, icon))
 		vim.notify(string.format("🦫 [%s] %s (#%d) [%s]", project, title, id, priority), vim.log.levels.INFO)
@@ -61,14 +63,23 @@ vim.api.nvim_create_user_command("TailDone", function()
 	for i = #tasks, 1, -1 do
 		local t = tasks[i]
 		if t.status == "pending" then
+			local git_stats = nil
+			if t.git_baseline then
+				git_stats = git.get_cumulative_stats(t.git_baseline)
+			end
 			store.update_task(t.id, {
 				status = "done",
 				start_ts = t.start_ts or (os.time() - elapsed),
 				end_ts = os.time(),
 				duration_sec = elapsed,
+				git_stats = git_stats,
 			})
+			local stats_msg = ""
+			if git_stats then
+				stats_msg = string.format(" (+%d/-%d)", git_stats.added, git_stats.removed)
+			end
 			vim.notify(
-				string.format("✅ [%s] %s (%dm)", t.project, t.title, math.floor(elapsed / 60)),
+				string.format("✅ [%s] %s (%dm)%s", t.project, t.title, math.floor(elapsed / 60), stats_msg),
 				vim.log.levels.INFO
 			)
 			break

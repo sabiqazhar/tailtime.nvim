@@ -55,12 +55,18 @@ function M.generate()
 				total_sec = 0,
 				done_count = 0,
 				pending_count = 0,
+				total_added = 0,
+				total_removed = 0,
 			}
 		end
 		table.insert(projects[proj].tasks, t)
 		if t.status == "done" and t.duration_sec then
 			projects[proj].total_sec = projects[proj].total_sec + t.duration_sec
 			projects[proj].done_count = projects[proj].done_count + 1
+			if t.git_stats then
+				projects[proj].total_added = projects[proj].total_added + (t.git_stats.added or 0)
+				projects[proj].total_removed = projects[proj].total_removed + (t.git_stats.removed or 0)
+			end
 		else
 			projects[proj].pending_count = projects[proj].pending_count + 1
 		end
@@ -107,15 +113,23 @@ function M.generate()
 	local grand_total = 0
 	local total_done = 0
 	local total_pending = 0
+	local grand_added = 0
+	local grand_removed = 0
 
 	for _, proj in ipairs(sorted) do
 		grand_total = grand_total + proj.total_sec
 		total_done = total_done + proj.done_count
 		total_pending = total_pending + proj.pending_count
+		grand_added = grand_added + proj.total_added
+		grand_removed = grand_removed + proj.total_removed
 
 		table.insert(lines, "")
 		table.insert(lines, string.format("📁 %s", proj.name))
-		table.insert(lines, string.format("   ⏱️  %s | ✅ %d | ⏳ %d", fmt_hm(proj.total_sec), proj.done_count, proj.pending_count))
+		local git_summary = ""
+		if proj.total_added > 0 or proj.total_removed > 0 then
+			git_summary = string.format(" | 📈 +%d/-%d", proj.total_added, proj.total_removed)
+		end
+		table.insert(lines, string.format("   ⏱️  %s | ✅ %d | ⏳ %d%s", fmt_hm(proj.total_sec), proj.done_count, proj.pending_count, git_summary))
 
 		-- List tasks under project
 		for _, t in ipairs(proj.tasks) do
@@ -124,13 +138,21 @@ function M.generate()
 			local duration = t.duration_sec and (" (" .. fmt_hm(t.duration_sec) .. ")") or ""
 			local start = fmt_time(t.start_ts)
 			local ending = fmt_time(t.end_ts)
-			table.insert(lines, string.format("   %s %s [%s-%s] %s%s", status_icon, priority, start, ending, t.title, duration))
+			local git_line = ""
+			if t.git_stats then
+				git_line = string.format(" 📈 +%d/-%d", t.git_stats.added, t.git_stats.removed)
+			end
+			table.insert(lines, string.format("   %s %s [%s-%s] %s%s%s", status_icon, priority, start, ending, t.title, duration, git_line))
 		end
 	end
 
 	table.insert(lines, "")
 	table.insert(lines, string.rep("━", 50))
-	table.insert(lines, string.format("📊 TOTAL: %s | %d done / %d pending", fmt_hm(grand_total), total_done, total_pending))
+	local git_total = ""
+	if grand_added > 0 or grand_removed > 0 then
+		git_total = string.format(" | 📈 +%d/-%d", grand_added, grand_removed)
+	end
+	table.insert(lines, string.format("📊 TOTAL: %s | %d done / %d pending%s", fmt_hm(grand_total), total_done, total_pending, git_total))
 	table.insert(lines, "")
 	table.insert(lines, "Press <q> to close • <e> export markdown")
 
