@@ -67,7 +67,7 @@ function M.parse_raw_input(raw)
 	return vim.trim(project), vim.trim(title), parsed_prio
 end
 
-function M.add_task(raw_input, priority)
+function M.add_task(raw_input, priority, git_baseline)
 	local project, title, parsed_prio = M.parse_raw_input(raw_input)
 	local final_prio = priority or parsed_prio or "medium"
 
@@ -82,6 +82,8 @@ function M.add_task(raw_input, priority)
 		duration_sec = nil,
 		status = "pending",
 		created_at = os.date("!%Y-%m-%dT%H:%M:%SZ"),
+		git_baseline = git_baseline,
+		git_stats = nil,
 	}
 	table.insert(session.tasks, task)
 	session.next_id = session.next_id + 1
